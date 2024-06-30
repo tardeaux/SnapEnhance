@@ -7,18 +7,17 @@ import android.util.TypedValue
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.ui.graphics.toArgb
 import me.rhunk.snapenhance.core.features.Feature
-import me.rhunk.snapenhance.core.features.FeatureLoadParams
 import me.rhunk.snapenhance.core.util.hook.HookStage
 import me.rhunk.snapenhance.core.util.hook.Hooker
 import me.rhunk.snapenhance.core.util.hook.hook
 import me.rhunk.snapenhance.core.util.ktx.getIdentifier
 
-class CustomizeUI: Feature("Customize UI", loadParams = FeatureLoadParams.ACTIVITY_CREATE_SYNC) {
+class CustomizeUI: Feature("Customize UI") {
     private fun getAttribute(name: String): Int {
         return context.resources.getIdentifier(name, "attr")
     }
 
-    override fun onActivityCreate() {
+    override fun init() {
         val customizeUIConfig = context.config.userInterface.customizeUi
         val themePicker = customizeUIConfig.themePicker.getNullable() ?: return
         val colorsConfig = context.config.userInterface.customizeUi.colors

@@ -106,7 +106,7 @@ class SnapEnhance {
                     appContext.mainActivity = this
                     if (!appContext.mappings.isMappingsLoaded) return@hookMainActivity
                     appContext.isMainActivityPaused = false
-                    onActivityCreate()
+                    onActivityCreate(this)
                     appContext.actionManager.onNewIntent(intent)
                 }
 
@@ -166,12 +166,12 @@ class SnapEnhance {
         }
     }
 
-    private fun onActivityCreate() {
+    private fun onActivityCreate(activity: Activity) {
         measureTimeMillis {
             with(appContext) {
-                features.onActivityCreate()
-                inAppOverlay.onActivityCreate(mainActivity!!)
-                scriptRuntime.eachModule { callFunction("module.onSnapMainActivityCreate", mainActivity!!) }
+                features.onActivityCreate(activity)
+                inAppOverlay.onActivityCreate(activity)
+                scriptRuntime.eachModule { callFunction("module.onSnapMainActivityCreate", activity) }
                 actionManager.onActivityCreate()
             }
         }.also { time ->

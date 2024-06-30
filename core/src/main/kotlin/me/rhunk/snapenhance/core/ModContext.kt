@@ -79,7 +79,7 @@ class ModContext(
     }
 
     fun runOnUiThread(runnable: () -> Unit) {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
+        if (Looper.getMainLooper().isCurrentThread) {
             runnable()
             return
         }
@@ -95,7 +95,7 @@ class ModContext(
             runCatching {
                 runnable()
             }.onFailure {
-                longToast("Async task failed " + it.message)
+                longToast("Async task failed: " + it.message)
                 log.error("Async task failed", it)
             }
         }
