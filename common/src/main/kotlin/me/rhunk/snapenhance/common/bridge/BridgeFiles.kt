@@ -16,7 +16,8 @@ enum class FileHandleScope(
     INTERNAL("internal"),
     LOCALE("locale"),
     USER_IMPORT("user_import"),
-    COMPOSER("composer");
+    COMPOSER("composer"),
+    THEME("theme");
 
     companion object {
         fun fromValue(name: String): FileHandleScope? = entries.find { it.key == name }
