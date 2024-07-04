@@ -94,7 +94,7 @@ class EditThemeSection: Routes.Route() {
                     text = {
                         var filter by remember { mutableStateOf("") }
                         val attributes = rememberAsyncMutableStateList(defaultValue = listOf(), keys = arrayOf(filter)) {
-                            AvailableThemingAttributes[ThemingAttribute.COLOR]?.filter { key ->
+                            AvailableThemingAttributes[ThemingAttributeType.COLOR]?.filter { key ->
                                 themeColors.none { it.key == key } && (key.contains(filter, ignoreCase = true) || attributesTranslation.getOrNull(key)?.contains(filter, ignoreCase = true) == true)
                             } ?: emptyList()
                         }
@@ -173,6 +173,7 @@ class EditThemeSection: Routes.Route() {
         }
 
         var themeName by remember { mutableStateOf("") }
+        var themeDescription by remember { mutableStateOf("") }
         var themeVersion by remember { mutableStateOf("1.0.0") }
         var themeAuthor by remember { mutableStateOf("") }
         var themeUpdateUrl by remember { mutableStateOf("") }
@@ -181,6 +182,7 @@ class EditThemeSection: Routes.Route() {
             currentThemeId?.let { themeId ->
                 context.database.getThemeInfo(themeId)?.also { theme ->
                     themeName = theme.name
+                    themeDescription = theme.description ?: ""
                     theme.version?.let { themeVersion = it }
                     themeAuthor = theme.author ?: ""
                     themeUpdateUrl = theme.updateUrl ?: ""
@@ -190,7 +192,7 @@ class EditThemeSection: Routes.Route() {
 
         val lazyListState = rememberLazyListState()
 
-        val themeContent by rememberAsyncMutableState(defaultValue = DatabaseThemeContent(), keys = arrayOf(themeInfo)) {
+        rememberAsyncMutableState(defaultValue = DatabaseThemeContent(), keys = arrayOf(themeInfo)) {
             currentThemeId?.let {
                 context.database.getThemeContent(it)?.also { content ->
                     themeColors.clear()
@@ -209,6 +211,7 @@ class EditThemeSection: Routes.Route() {
                         id = currentThemeId ?: -1,
                         enabled = themeInfo?.enabled ?: false,
                         name = themeName,
+                        description = themeDescription,
                         version = themeVersion,
                         author = themeAuthor,
                         updateUrl = themeUpdateUrl
@@ -264,7 +267,7 @@ class EditThemeSection: Routes.Route() {
                     onValueChange = { themeName = it },
                     label = { Text("Theme Name") },
                     colors = transparentTextFieldColors(),
-                    maxLines = 1
+                    singleLine = true,
                 )
                 LaunchedEffect(Unit) {
                     if (currentThemeId == null) {
@@ -285,7 +288,15 @@ class EditThemeSection: Routes.Route() {
             if (moreOptionsExpanded) {
                 TextField(
                     modifier = Modifier.fillMaxWidth(),
-                    maxLines = 1,
+                    maxLines = 3,
+                    value = themeDescription,
+                    onValueChange = { themeDescription = it },
+                    label = { Text("Description") },
+                    colors = transparentTextFieldColors()
+                )
+                TextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                     value = themeVersion,
                     onValueChange = { themeVersion = it },
                     label = { Text("Version") },
@@ -293,7 +304,7 @@ class EditThemeSection: Routes.Route() {
                 )
                 TextField(
                     modifier = Modifier.fillMaxWidth(),
-                    maxLines = 1,
+                    singleLine = true,
                     value = themeAuthor,
                     onValueChange = { themeAuthor = it },
                     label = { Text("Author") },
@@ -301,7 +312,7 @@ class EditThemeSection: Routes.Route() {
                 )
                 TextField(
                     modifier = Modifier.fillMaxWidth(),
-                    maxLines = 1,
+                    singleLine = true,
                     value = themeUpdateUrl,
                     onValueChange = { themeUpdateUrl = it },
                     label = { Text("Update URL") },

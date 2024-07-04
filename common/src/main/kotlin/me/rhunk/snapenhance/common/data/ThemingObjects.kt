@@ -23,24 +23,60 @@ data class DatabaseTheme(
     val id: Int,
     val enabled: Boolean,
     val name: String,
+    val description: String?,
     val version: String?,
     val author: String?,
     val updateUrl: String?,
-)
+) {
+    fun toExportedTheme(content: DatabaseThemeContent): ExportedTheme {
+        return ExportedTheme(
+            name = name,
+            description = description,
+            version = version,
+            author = author,
+            content = content,
+        )
+    }
+}
 
 data class ExportedTheme(
     val name: String,
+    val description: String?,
     val version: String?,
     val author: String?,
     val content: DatabaseThemeContent,
+) {
+    fun toDatabaseTheme(id: Int = -1, updateUrl: String? = null, enabled: Boolean = false): DatabaseTheme {
+        return DatabaseTheme(
+            id = id,
+            enabled = enabled,
+            name = name,
+            description = description,
+            version = version,
+            author = author,
+            updateUrl = updateUrl,
+        )
+    }
+}
+
+data class RepositoryThemeManifest(
+    val name: String,
+    val author: String?,
+    val description: String?,
+    val version: String?,
+    val filepath: String,
 )
 
-enum class ThemingAttribute {
+data class RepositoryIndex(
+    val themes: List<RepositoryThemeManifest> = emptyList(),
+)
+
+enum class ThemingAttributeType {
     COLOR
 }
 
 val AvailableThemingAttributes = mapOf(
-    ThemingAttribute.COLOR to listOf(
+    ThemingAttributeType.COLOR to listOf(
         "sigColorTextPrimary",
         "sigColorBackgroundSurface",
         "sigColorBackgroundMain",

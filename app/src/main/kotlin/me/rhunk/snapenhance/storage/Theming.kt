@@ -19,6 +19,7 @@ fun AppDatabase.getThemeList(): List<DatabaseTheme> {
                         id = cursor.getIntOrNull("id") ?: continue,
                         enabled = cursor.getIntOrNull("enabled") == 1,
                         name = cursor.getStringOrNull("name") ?: continue,
+                        description = cursor.getStringOrNull("description"),
                         version = cursor.getStringOrNull("version"),
                         author = cursor.getStringOrNull("author"),
                         updateUrl = cursor.getStringOrNull("updateUrl")
@@ -38,10 +39,20 @@ fun AppDatabase.getThemeInfo(id: Int): DatabaseTheme? {
                 id = cursor.getIntOrNull("id") ?: return@use null,
                 enabled = cursor.getIntOrNull("enabled") == 1,
                 name = cursor.getStringOrNull("name") ?: return@use null,
+                description = cursor.getStringOrNull("description"),
                 version = cursor.getStringOrNull("version"),
                 author = cursor.getStringOrNull("author"),
                 updateUrl = cursor.getStringOrNull("updateUrl")
             )
+        }
+    }
+}
+
+fun AppDatabase.getThemeIdByUpdateUrl(updateUrl: String): Int? {
+    return runBlocking(executor.asCoroutineDispatcher()) {
+        database.rawQuery("SELECT id FROM themes WHERE updateUrl = ?", arrayOf(updateUrl)).use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            cursor.getIntOrNull("id")
         }
     }
 }
@@ -51,6 +62,7 @@ fun AppDatabase.addOrUpdateTheme(theme: DatabaseTheme, themeId: Int? = null): In
         val contentValues = ContentValues().apply {
             put("enabled", if (theme.enabled) 1 else 0)
             put("name", theme.name)
+            put("description", theme.description)
             put("version", theme.version)
             put("author", theme.author)
             put("updateUrl", theme.updateUrl)

@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.navigation.NavBackStackEntry
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.rhunk.snapenhance.common.data.DatabaseTheme
@@ -31,32 +31,33 @@ import me.rhunk.snapenhance.common.data.DatabaseThemeContent
 import me.rhunk.snapenhance.common.data.ExportedTheme
 import me.rhunk.snapenhance.common.ui.AsyncUpdateDispatcher
 import me.rhunk.snapenhance.common.ui.rememberAsyncMutableStateList
+import me.rhunk.snapenhance.common.ui.transparentTextFieldColors
+import me.rhunk.snapenhance.common.util.ktx.getUrlFromClipboard
 import me.rhunk.snapenhance.storage.*
 import me.rhunk.snapenhance.ui.manager.Routes
-import me.rhunk.snapenhance.ui.util.*
+import me.rhunk.snapenhance.ui.util.ActivityLauncherHelper
+import me.rhunk.snapenhance.ui.util.openFile
+import me.rhunk.snapenhance.ui.util.pagerTabIndicatorOffset
+import me.rhunk.snapenhance.ui.util.saveFile
 import okhttp3.OkHttpClient
 
 class ThemingRoot: Routes.Route() {
-    private val reloadDispatcher = AsyncUpdateDispatcher()
+    val localReloadDispatcher = AsyncUpdateDispatcher()
     private lateinit var activityLauncherHelper: ActivityLauncherHelper
 
-    private val titles = listOf("Installed Themes", "Catalog")
     private var currentPage by mutableIntStateOf(0)
-    private val okHttpClient by lazy { OkHttpClient() }
+    val okHttpClient by lazy { OkHttpClient() }
+    val searchFilter = mutableStateOf("")
+
 
     private fun exportTheme(theme: DatabaseTheme) {
         context.coroutineScope.launch {
-            val themeJson = ExportedTheme(
-                name = theme.name,
-                version = theme.version ?: "",
-                author = theme.author ?: "",
-                content = context.database.getThemeContent(theme.id) ?: DatabaseThemeContent()
-            )
+            val exportedTheme = theme.toExportedTheme(context.database.getThemeContent(theme.id) ?: DatabaseThemeContent())
 
             activityLauncherHelper.saveFile(theme.name.replace(" ", "_").lowercase() + ".json") { uri ->
                 runCatching {
                     context.androidContext.contentResolver.openOutputStream(uri.toUri())?.use { outputStream ->
-                        outputStream.write(context.gson.toJson(themeJson).toByteArray())
+                        outputStream.write(context.gson.toJson(exportedTheme).toByteArray())
                         outputStream.flush()
                     }
                     context.shortToast("Theme exported successfully")
@@ -76,27 +77,32 @@ class ThemingRoot: Routes.Route() {
             context.database.setThemeContent(themeId, context.database.getThemeContent(theme.id) ?: DatabaseThemeContent())
             context.shortToast("Theme duplicated successfully")
             withContext(Dispatchers.Main) {
-                reloadDispatcher.dispatch()
+                localReloadDispatcher.dispatch()
             }
         }
     }
 
-    private suspend fun importTheme(content: String, url: String? = null) {
+    suspend fun importTheme(content: String, updateUrl: String? = null) {
         val theme = context.gson.fromJson(content, ExportedTheme::class.java)
-        val themeId = context.database.addOrUpdateTheme(
-            DatabaseTheme(
-                id = -1,
-                enabled = false,
-                name = theme.name,
-                version = theme.version,
-                author = theme.author,
-                updateUrl = url
-            )
+        val existingTheme = updateUrl?.let {
+            context.database.getThemeIdByUpdateUrl(it)
+        }?.let {
+            context.database.getThemeInfo(it)
+        }
+        val databaseTheme = theme.toDatabaseTheme(
+            updateUrl = updateUrl,
+            enabled = existingTheme?.enabled ?: false
         )
+
+        val themeId = context.database.addOrUpdateTheme(
+            themeId = existingTheme?.id,
+            theme = databaseTheme
+        )
+
         context.database.setThemeContent(themeId, theme.content)
         context.shortToast("Theme imported successfully")
         withContext(Dispatchers.Main) {
-            reloadDispatcher.dispatch()
+            localReloadDispatcher.dispatch()
         }
     }
 
@@ -135,6 +141,40 @@ class ThemingRoot: Routes.Route() {
         activityLauncherHelper = ActivityLauncherHelper(context.activity!!)
     }
 
+    override val topBarActions: @Composable (RowScope.() -> Unit) = {
+        var showSearchBar by remember { mutableStateOf(false) }
+        val focusRequester = remember { FocusRequester() }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (showSearchBar) {
+                OutlinedTextField(
+                    value = searchFilter.value,
+                    onValueChange = { searchFilter.value = it },
+                    placeholder = { Text("Search") },
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester)
+                        .onGloballyPositioned {
+                            focusRequester.requestFocus()
+                        },
+                    colors = transparentTextFieldColors()
+                )
+                DisposableEffect(Unit) {
+                    onDispose {
+                        searchFilter.value = ""
+                    }
+                }
+            }
+            IconButton(onClick = {
+                showSearchBar = !showSearchBar
+            }) {
+                Icon(if (showSearchBar) Icons.Default.Close else Icons.Default.Search, contentDescription = null)
+            }
+        }
+    }
+
     override val floatingActionButton: @Composable () -> Unit = {
         var showImportFromUrlDialog by remember { mutableStateOf(false) }
 
@@ -154,10 +194,14 @@ class ThemingRoot: Routes.Route() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(focusRequester)
+                            .onGloballyPositioned {
+                                focusRequester.requestFocus()
+                            }
                     )
                     LaunchedEffect(Unit) {
-                        delay(100)
-                        focusRequester.requestFocus()
+                        context.androidContext.getUrlFromClipboard()?.let {
+                            url = it
+                        }
                     }
                 },
                 confirmButton = {
@@ -226,14 +270,36 @@ class ThemingRoot: Routes.Route() {
                         }
                     )
                 }
+                1 -> {
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            routes.manageRepos.navigate()
+                        },
+                        icon = {
+                            Icon(Icons.Default.Public, contentDescription = null)
+                        },
+                        text = {
+                            Text("Manage repositories")
+                        }
+                    )
+                }
             }
         }
     }
 
     @Composable
     private fun InstalledThemes() {
-        val themes = rememberAsyncMutableStateList(defaultValue = listOf(), updateDispatcher = reloadDispatcher) {
-            context.database.getThemeList()
+        val themes = rememberAsyncMutableStateList(defaultValue = listOf(), updateDispatcher = localReloadDispatcher, keys = arrayOf(searchFilter.value)) {
+            context.database.getThemeList().let {
+                val filter = searchFilter.value
+                if (filter.isNotBlank()) {
+                    it.filter { theme ->
+                        theme.name.contains(filter, ignoreCase = true) ||
+                        theme.author?.contains(filter, ignoreCase = true) == true ||
+                        theme.description?.contains(filter, ignoreCase = true) == true
+                    }
+                } else it
+            }
         }
 
         LazyColumn(
@@ -322,10 +388,12 @@ class ThemingRoot: Routes.Route() {
                             ) {
                                 actionsRow.forEach { entry ->
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().clickable {
-                                            showSettings = false
-                                            entry.value()
-                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                showSettings = false
+                                                entry.value()
+                                            },
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(entry.key.second, contentDescription = null, modifier = Modifier.padding(16.dp))
@@ -345,18 +413,11 @@ class ThemingRoot: Routes.Route() {
         }
     }
 
-    @Composable
-    private fun ThemeCatalog() {
-        val installedThemes = rememberAsyncMutableStateList(defaultValue = listOf(), updateDispatcher = reloadDispatcher) {
-            context.database.getThemeList()
-        }
-
-        Text(text = "Not Implemented", modifier = Modifier.fillMaxWidth().padding(5.dp), textAlign = TextAlign.Center)
-    }
 
     @OptIn(ExperimentalFoundationApi::class)
     override val content: @Composable (NavBackStackEntry) -> Unit = {
         val coroutineScope = rememberCoroutineScope()
+        val titles = remember { listOf("Installed Themes", "Catalog") }
         val pagerState = rememberPagerState { titles.size }
         currentPage = pagerState.currentPage
 
@@ -394,7 +455,7 @@ class ThemingRoot: Routes.Route() {
             ) { page ->
                 when (page) {
                     0 -> InstalledThemes()
-                    1 -> ThemeCatalog()
+                    1 -> ThemeCatalog(this@ThemingRoot)
                 }
             }
         }
