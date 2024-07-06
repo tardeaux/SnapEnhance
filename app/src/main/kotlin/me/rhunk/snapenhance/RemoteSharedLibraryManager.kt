@@ -69,8 +69,8 @@ class RemoteSharedLibraryManager(
 
         remoteSideContext.log.info("Updating sif from $currentVersion to $latestVersion")
         if (downloadLatest(libraryFile)) {
-            remoteSideContext.sharedPreferences.edit().putString("sif", latestVersion).apply()
-            remoteSideContext.log.info("sif updated to $latestVersion")
+            remoteSideContext.sharedPreferences.edit().putString("sif", latestVersion).commit()
+            remoteSideContext.shortToast("SIF updated to $latestVersion!")
             // force restart snapchat
             remoteSideContext.bridgeService?.stopSelf()
         } else {

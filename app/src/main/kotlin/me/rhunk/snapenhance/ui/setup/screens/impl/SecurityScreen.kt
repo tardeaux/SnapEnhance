@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import me.rhunk.snapenhance.ui.setup.screens.SetupScreen
 
 class SecurityScreen : SetupScreen() {
@@ -63,7 +64,10 @@ class SecurityScreen : SetupScreen() {
         ) {
             Button(
                 onClick = {
-                    context.sharedPreferences.edit().putString("sif", "").apply()
+                    context.coroutineScope.launch {
+                        context.sharedPreferences.edit().putString("sif", "").commit()
+                        context.remoteSharedLibraryManager.init()
+                    }
                     goNext()
                 }
             ) {

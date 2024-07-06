@@ -78,7 +78,7 @@ class RemoteSideContext(
     val tracker = RemoteTracker(this)
     val accountStorage = RemoteAccountStorage(this)
     val locationManager = RemoteLocationManager(this)
-    private val remoteSharedLibraryManager = RemoteSharedLibraryManager(this)
+    val remoteSharedLibraryManager = RemoteSharedLibraryManager(this)
 
     //used to load bitmoji selfies and download previews
     val imageLoader by lazy {
