@@ -11,7 +11,7 @@ import me.rhunk.snapenhance.core.util.LSPatchUpdater
 import me.rhunk.snapenhance.core.util.hook.HookStage
 import me.rhunk.snapenhance.core.util.hook.hook
 
-class DeviceSpooferHook: Feature("device_spoofer")  {
+class DeviceSpooferHook: Feature("Device Spoofer")  {
 	private fun hookInstallerPackageName() {
 		context.androidContext.packageManager::class.java.hook("getInstallerPackageName", HookStage.BEFORE) { param ->
 			param.setResult("com.android.vending")

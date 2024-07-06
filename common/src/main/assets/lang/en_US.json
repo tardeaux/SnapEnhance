@@ -299,6 +299,10 @@
             "name": "Change Language",
             "description": "Change the language of SnapEnhance"
         },
+        "security_features": {
+            "name": "Security Features",
+            "description": "Access security features"
+        },
         "file_imports": {
             "name": "File Imports",
             "description": "Import files for use in Snapchat"

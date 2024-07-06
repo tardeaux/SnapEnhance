@@ -32,8 +32,8 @@ enum class InternalFileHandleType(
     CONFIG("config", "config.json"),
     MAPPINGS("mappings", "mappings.json"),
     MESSAGE_LOGGER("message_logger", "message_logger.db", isDatabase = true),
-    PINNED_BEST_FRIEND("pinned_best_friend", "pinned_best_friend.txt");
-
+    PINNED_BEST_FRIEND("pinned_best_friend", "pinned_best_friend.txt"),
+    SIF("sif", "libsif.so");
 
     fun resolve(context: Context): File = if (isDatabase) {
         context.getDatabasePath(fileName)
