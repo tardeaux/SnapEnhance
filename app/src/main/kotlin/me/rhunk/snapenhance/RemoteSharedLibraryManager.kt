@@ -1,5 +1,6 @@
 package me.rhunk.snapenhance
 
+import android.os.Build
 import me.rhunk.snapenhance.common.bridge.InternalFileHandleType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -26,8 +27,9 @@ class RemoteSharedLibraryManager(
     }
 
     private fun downloadLatest(outputFile: File): Boolean {
+        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: return false
         val request = Request.Builder()
-            .url("https://raw.githubusercontent.com/SnapEnhance/resources/main/sif/libsif.so")
+            .url("https://raw.githubusercontent.com/SnapEnhance/resources/main/sif/$abi.so")
             .build()
         runCatching {
             okHttpClient.newCall(request).execute().use { response ->
