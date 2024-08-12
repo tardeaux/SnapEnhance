@@ -57,10 +57,10 @@ jobs:
           ./gradlew getVersion
           echo "version=$(cat app/build/version.txt)" >> $GITHUB_ENV
 
-      - name: Delete unsigned APK file and rename the signed one
-        run: |
-          find app/build/outputs/apk/armv8/debug/ -type f ! -name '*-signed*' -delete
-          mv ${{steps.sign_app.outputs.signedReleaseFile}} app/build/outputs/apk/armv8/debug/snapenhance-${{ env.version }}-armv8-${GITHUB_SHA::7}.apk
+#      - name: Delete unsigned APK file and rename the signed one
+#        run: |
+#          find app/build/outputs/apk/armv8/debug/ -type f ! -name '*-signed*' -delete
+#          mv ${{steps.sign_app.outputs.signedReleaseFile}} app/build/outputs/apk/armv8/debug/snapenhance-${{ env.version }}-armv8-${GITHUB_SHA::7}.apk
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
